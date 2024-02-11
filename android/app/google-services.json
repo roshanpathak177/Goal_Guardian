@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "959274154653",
+    "project_id": "goal-guradian",
+    "storage_bucket": "goal-guradian.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:959274154653:android:7a2bbdec62f0afd9d13274",
+        "android_client_info": {
+          "package_name": "com.example.goal_guardian"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCLOWZHCB9FYUb0PUWqQkmnI6Vc3CJPUkc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
