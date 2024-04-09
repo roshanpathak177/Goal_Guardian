@@ -1,7 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:goal_guardian/components/alert_box.dart';
 import 'package:goal_guardian/components/button.dart';
 import 'package:goal_guardian/components/square_tile.dart';
 import 'package:goal_guardian/components/text_field.dart';
+import 'package:goal_guardian/pages/intro.dart';
 
 class RegisterPage extends StatefulWidget {
   final Function()? onTap;
@@ -17,6 +20,22 @@ class _RegisterPageState extends State<RegisterPage> {
   final passwordTextController = TextEditingController();
   final confirmPasswordTextController = TextEditingController();
   
+  signUp(String email, String password) async{
+    if(email == "" && password == ""){
+      AlertBox(text: "Enter Required Fields");
+    } else{
+      UserCredential? usercredential;
+      try{
+        usercredential =await FirebaseAuth.instance.createUserWithEmailAndPassword(email: email, password: password).then((value) {
+          Navigator.push(context, MaterialPageRoute(builder: (context)=> Intro()));
+        });
+      }
+      on FirebaseAuthException catch(ex){
+         return AlertBox(text:  ex.code.toString());
+      }
+    }
+  }
+ 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -63,7 +82,7 @@ class _RegisterPageState extends State<RegisterPage> {
             const SizedBox(height: 30),
 
             //Sign in Button
-            MyButton(onTap: (){}, text: 'Log In'),
+            MyButton(onTap: (){signUp(emailTextController.text.toString(), passwordTextController.text.toString());}, text: 'Log In'),
 
             const SizedBox(height: 25),
 

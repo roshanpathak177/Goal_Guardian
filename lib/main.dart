@@ -1,17 +1,18 @@
-import 'package:firebase_core/firebase_core.dart';
+// import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:goal_guardian/auth/login_or_register.dart';
 import 'package:goal_guardian/components/side_navbar.dart';
+import 'package:goal_guardian/pages/groups.dart';
+import 'package:goal_guardian/pages/intro.dart';
 // import 'package:goal_guardian/pages/intro.dart';
 
 
 // import 'package:goal_guardian/pages/login_page.dart';
 
-void main() async{
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+void main() {
   runApp(const MyApp());
 }
+
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -26,7 +27,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: LogingOrRegister(),
+      home: Intro(),
     );
   }
 }
@@ -43,6 +44,12 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   
   int _currentIndex = 0;
+
+  final List<Widget> _pages = [
+    const Text("Track your Goals!"),
+    GroupsPage(),
+  ]; 
+
   @override
   Widget build(BuildContext context) {
     // This method is rerun every time setState is called, for instance as done
