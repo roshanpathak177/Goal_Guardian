@@ -4,6 +4,8 @@ import 'package:goal_guardian/auth/login_or_register.dart';
 import 'package:goal_guardian/components/side_navbar.dart';
 import 'package:goal_guardian/pages/groups.dart';
 import 'package:goal_guardian/pages/intro.dart';
+import 'package:goal_guardian/pages/stats.dart';
+import 'package:goal_guardian/pages/user_profile.dart';
 // import 'package:goal_guardian/pages/intro.dart';
 
 
@@ -28,6 +30,11 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: Intro(),
+      routes: {
+        '/groups': (context) => GroupsPage(),
+        '/stats': (context) => StatsPage(),
+        '/profile': (context) => ProfilePage()
+      },
     );
   }
 }
@@ -48,7 +55,30 @@ class _MyHomePageState extends State<MyHomePage> {
   final List<Widget> _pages = [
     const Text("Track your Goals!"),
     GroupsPage(),
+    StatsPage(),
+    ProfilePage(),
   ]; 
+
+  final List<Habit> _habits = [
+    Habit(
+      name: 'Daily Exercise',
+      progress: 80,
+      totalTime: 3600, // in seconds
+      avgTime: 300, // in seconds
+    ),
+    Habit(
+      name: 'Reading',
+      progress: 65,
+      totalTime: 7200, // in seconds
+      avgTime: 600, // in seconds
+    ),
+    Habit(
+      name: 'Meditation',
+      progress: 90,
+      totalTime: 10800, // in seconds
+      avgTime: 900, // in seconds
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +99,15 @@ class _MyHomePageState extends State<MyHomePage> {
         // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
       ),
-      body: const Text("Track your Goals!"),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [const Text("Track your Goals!"),
+        _buildMotivationalSection(),
+        _buildHabitsSection(),
+        _buildQuickActionsSection(),
+        _buildSocialSection(),],
+        )
+        ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         // ignore: prefer_const_literals_to_create_immutables
@@ -98,9 +136,200 @@ class _MyHomePageState extends State<MyHomePage> {
         onTap: (index){
           setState((){
             _currentIndex = index;
+            if (index == 1) { // Check if "Groups" tab is tapped
+              Navigator.pushNamed(context, '/groups'); // Navigate to the GroupsPage route
+            }
+            if (index == 2) { // Check if "Stats" tab is tapped
+              Navigator.pushNamed(context, '/stats'); // Navigate to the StatsPage route
+            }
+            if (index == 3) { // Check if "Stats" tab is tapped
+              Navigator.pushNamed(context, '/profile'); // Navigate to the StatsPage route
+            }
           });
         },
         ),
     );
   }
+  Widget _buildMotivationalSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text(
+              'Stay Motivated',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              '"Believe you can and youre halfway there."',
+              style: TextStyle(
+                fontSize: 16,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              '- Theodore Roosevelt',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHabitsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Your Habits',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        ...List.generate(_habits.length, (index) {
+          final habit = _habits[index];
+          return _buildHabitCard(habit);
+        }),
+      ],
+    );
+  }
+
+  Widget _buildHabitCard(Habit habit) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              habit.name,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              value: habit.progress / 100,
+              color: Colors.blue,
+              backgroundColor: Colors.grey.shade300,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Total Time: ${_formatTime(habit.totalTime)}'),
+                Text('Avg Time: ${_formatTime(habit.avgTime)}'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActionsSection() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        ElevatedButton.icon(
+          onPressed: () {
+            // Navigate to add new habit page
+          },
+          icon: const Icon(Icons.add),
+          label: const Text('Add Habit'),
+        ),
+        ElevatedButton.icon(
+          onPressed: () {
+            // Navigate to schedule page
+          },
+          icon: const Icon(Icons.calendar_today),
+          label: const Text('View Schedule'),
+        ),
+        ElevatedButton.icon(
+          onPressed: () {
+            // Navigate to stats page
+          },
+          icon: const Icon(Icons.bar_chart),
+          label: const Text('View Stats'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSocialSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Connect with Others',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            ElevatedButton.icon(
+              onPressed: () {
+                // Navigate to groups page
+              },
+              icon: const Icon(Icons.group),
+              label: const Text('Join Groups'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                // Navigate to leaderboard page
+              },
+              icon: const Icon(Icons.leaderboard),
+              label: const Text('Leaderboard'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                // Navigate to share progress page
+              },
+              icon: const Icon(Icons.share),
+              label: const Text('Share Progress'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  String _formatTime(int seconds) {
+    final hours = (seconds ~/ 3600).toString().padLeft(2, '0');
+    final minutes = ((seconds % 3600) ~/ 60).toString().padLeft(2, '0');
+    final remainingSeconds = (seconds % 60).toString().padLeft(2, '0');
+    return '$hours:$minutes:$remainingSeconds';
+  }
 }
+
+class Habit {
+  final String name;
+  final int progress;
+  final int totalTime;
+  final int avgTime;
+
+  Habit({
+    required this.name,
+    required this.progress,
+    required this.totalTime,
+    required this.avgTime,
+  });
+}
+
