@@ -1,5 +1,5 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:goal_guardian/components/button.dart';
 import 'package:goal_guardian/components/square_tile.dart';
 import 'package:goal_guardian/components/text_field.dart';
 
@@ -16,6 +16,35 @@ class _LoginPageState extends State<LoginPage>{
   //text editing controller
   final emailTextController = TextEditingController();
   final passwordTextController = TextEditingController();
+
+  Future signIn() async{
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: emailTextController.text.trim(),
+        password: passwordTextController.text.trim(),
+      );
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') {
+        print('No user found for that email.');
+      } else if (e.code == 'wrong-password') {
+        print('Wrong password provided for that user.');
+      } else {
+        print('Error: $e');
+      }
+    } catch (e) {
+      print('Error: $e');
+    }
+  }
+  
+
+  //for better memory management
+  @override
+  void dispose(){
+    emailTextController.dispose();
+    passwordTextController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -55,7 +84,24 @@ class _LoginPageState extends State<LoginPage>{
             const SizedBox(height: 30),
 
             //Sign in Button
-            MyButton(onTap: (){}, text: 'Log In'),
+            GestureDetector(
+              onTap: signIn,
+              child: Container(
+                padding: EdgeInsets.all(25.0),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(15), 
+                  ),
+                child: const Center(
+                  child: Text('Sign in',
+                  style: TextStyle(
+                    color: Colors.white, 
+                    fontWeight: FontWeight.w400, 
+                    fontSize: 18)
+                    ),
+                  ),
+                ),
+              ),
 
             const SizedBox(height: 25),
 
