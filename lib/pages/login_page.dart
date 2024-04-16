@@ -2,6 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:goal_guardian/components/square_tile.dart';
 import 'package:goal_guardian/components/text_field.dart';
+import 'package:goal_guardian/pages/forgot_password.dart';
+import 'package:goal_guardian/pages/main_page.dart';
 
 class LoginPage extends StatefulWidget{
   final Function()? onTap;
@@ -16,13 +18,20 @@ class _LoginPageState extends State<LoginPage>{
   //text editing controller
   final emailTextController = TextEditingController();
   final passwordTextController = TextEditingController();
+  Color _buttonColor = Colors.red;
 
   Future signIn() async{
     try {
+      print('Signing in with email: ${emailTextController.text.trim()}');
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: emailTextController.text.trim(),
         password: passwordTextController.text.trim(),
       );
+      print('Sign-in successful');
+      Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const MainPage()),
+    );
     } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found') {
         print('No user found for that email.');
@@ -78,30 +87,53 @@ class _LoginPageState extends State<LoginPage>{
 
             const SizedBox(height: 5),
 
-            Text('Forgot Password?',
-            style: TextStyle(color: Colors.grey.shade600)),
+            GestureDetector(
+              onTap: (){
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(builder: (context){
+                    return ForgotPasswordPage();
+                  },)
+                );
+              },
+              child: Text('Forgot Password?',
+              style: TextStyle(color: Colors.grey.shade600)),
+            ),
 
             const SizedBox(height: 30),
 
             //Sign in Button
-            GestureDetector(
-              onTap: signIn,
-              child: Container(
-                padding: EdgeInsets.all(25.0),
-                decoration: BoxDecoration(
-                  color: Colors.red,
-                  borderRadius: BorderRadius.circular(15), 
+            StatefulBuilder(
+              builder: (BuildContext context, StateSetter setState) {
+                return InkWell(
+                onTap: () {
+                  signIn();
+                },
+                onHover: (value) {
+                  setState(() {
+                    _buttonColor = value ? Colors.deepOrange : Colors.red;
+                  });
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.all(25.0),
+                  decoration: BoxDecoration(
+                    color: _buttonColor,
+                    borderRadius: BorderRadius.circular(15),
                   ),
-                child: const Center(
-                  child: Text('Sign in',
-                  style: TextStyle(
-                    color: Colors.white, 
-                    fontWeight: FontWeight.w400, 
-                    fontSize: 18)
+                  child: const Center(
+                    child: Text(
+                        'Sign in',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w400,
+                        fontSize: 18,
+                      ),
                     ),
                   ),
                 ),
-              ),
+              );},
+            ),
 
             const SizedBox(height: 25),
 

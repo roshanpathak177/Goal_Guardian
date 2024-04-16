@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class SideNavBar extends StatelessWidget {
@@ -56,7 +57,9 @@ class SideNavBar extends StatelessWidget {
           ListTile(
             leading: Icon(Icons.exit_to_app),
             title: Text("Log Out", style: TextStyle(color: Colors.red, fontWeight:FontWeight.bold),),
-            onTap: () => null,
+            onTap: () {
+              FirebaseAuth.instance.signOut();
+            },
           ),
         ],
       )

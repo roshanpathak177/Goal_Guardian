@@ -1,7 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:goal_guardian/components/alert_box.dart';
-import 'package:goal_guardian/components/button.dart';
 import 'package:goal_guardian/components/square_tile.dart';
 import 'package:goal_guardian/components/text_field.dart';
 import 'package:goal_guardian/pages/intro.dart';
@@ -19,20 +18,39 @@ class _RegisterPageState extends State<RegisterPage> {
   final emailTextController = TextEditingController();
   final passwordTextController = TextEditingController();
   final confirmPasswordTextController = TextEditingController();
+  Color _buttonColor = Colors.red;
   
-  signUp(String email, String password) async{
+  @override
+  void dispose(){
+    emailTextController.dispose();
+    passwordTextController.dispose();
+    super.dispose();
+  }
+
+  Future signUp(String email, String password) async{
     if(email == "" && password == ""){
       AlertBox(text: "Enter Required Fields");
-    } else{
+    } else if(passwordConfirmed()) {
       UserCredential? usercredential;
       try{
-        usercredential =await FirebaseAuth.instance.createUserWithEmailAndPassword(email: email, password: password).then((value) {
+        usercredential =await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: emailTextController.text.trim(),
+          password: passwordTextController.text.trim()
+          ).then((value) {
           Navigator.push(context, MaterialPageRoute(builder: (context)=> Intro()));
         });
       }
       on FirebaseAuthException catch(ex){
          return AlertBox(text:  ex.code.toString());
       }
+    }
+  }
+
+  bool passwordConfirmed(){
+    if(passwordTextController.text.trim() == confirmPasswordTextController.text.trim()){
+      return true;
+    } else{
+      return false;
     }
   }
  
@@ -82,7 +100,37 @@ class _RegisterPageState extends State<RegisterPage> {
             const SizedBox(height: 30),
 
             //Sign in Button
-            MyButton(onTap: (){signUp(emailTextController.text.toString(), passwordTextController.text.toString());}, text: 'Log In'),
+            StatefulBuilder(
+              builder: (BuildContext context, StateSetter setState) {
+                return InkWell(
+                onTap: () {
+                  signUp(emailTextController.text , passwordTextController.text);
+                },
+                onHover: (value) {
+                  setState(() {
+                    _buttonColor = value ? Colors.deepOrange : Colors.red;
+                  });
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.all(25.0),
+                  decoration: BoxDecoration(
+                    color: _buttonColor,
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: const Center(
+                    child: Text(
+                        'Sign up',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w400,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ),
+                ),
+              );},
+            ),
 
             const SizedBox(height: 25),
 
