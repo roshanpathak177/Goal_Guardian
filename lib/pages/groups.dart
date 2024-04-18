@@ -1,4 +1,75 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+class Group {
+  final String id;
+  final String name;
+  final String photoUrl;
+  final String description;
+  final List<String> memberIds;
+  int get memberCount => memberIds.length;
+
+  Group({
+    required this.id,
+    required this.name,
+    required this.photoUrl,
+    required this.description,
+    required this.memberIds,
+  });
+
+  factory Group.fromMap(Map<String, dynamic> data, String documentId) {
+    return Group(
+      id: documentId,
+      name: data['name'],
+      photoUrl: data['photoUrl'],
+      description: data['description'],
+      memberIds: List<String>.from(data['memberIds']),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'photoUrl': photoUrl,
+      'description': description,
+      'memberIds': memberIds,
+    };
+  }
+}
+
+class FirestoreService {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  Future<void> createGroup(Group group) async {
+    await _firestore.collection('groups').add(group.toMap());
+  }
+
+  Future<List<Group>> getGroups() async {
+    final querySnapshot = await _firestore.collection('groups').get();
+    return querySnapshot.docs.map((doc) => Group.fromMap(doc.data(), doc.id)).toList();
+  }
+
+  Future<void> updateGroup(Group group) async {
+    await _firestore.collection('groups').doc(group.id).update(group.toMap());
+  }
+
+  Future<void> deleteGroup(String groupId) async {
+    await _firestore.collection('groups').doc(groupId).delete();
+  }
+
+  Future<void> joinGroup(Group group, String userId) async {
+    await _firestore.collection('groups').doc(group.id).update({
+      'memberIds': FieldValue.arrayUnion([userId]),
+    });
+  }
+
+  Future<void> leaveGroup(Group group, String userId) async {
+    await _firestore.collection('groups').doc(group.id).update({
+      'memberIds': FieldValue.arrayRemove([userId]),
+    });
+  }
+}
 
 class GroupsPage extends StatefulWidget {
   @override
@@ -6,30 +77,37 @@ class GroupsPage extends StatefulWidget {
 }
 
 class _GroupsPageState extends State<GroupsPage> {
-  // List of groups the user has joined
-  final List<Group> _groups = [
-    Group(
-      name: 'Fitness Enthusiasts',
-      photoUrl: 'assets/images/fitness_group.jpeg',
-      description: 'A group for people passionate about fitness and healthy living.',
-      memberCount: 234,
-    ),
-    Group(
-      name: 'Book Club',
-      photoUrl: 'assets/images/book_club.jpeg',
-      description: 'A group for book lovers to discuss and share their favorite reads.',
-      memberCount: 112,
-    ),
-    Group(
-      name: 'Productivity Hackers',
-      photoUrl: 'assets/images/productivity_group.jpeg',
-      description: 'A group dedicated to sharing tips and tricks for increasing productivity.',
-      memberCount: 78,
-    ),
-  ];
-
-  // Search query
+  List<Group> _groups = [];
   final String _searchQuery = '';
+  final FirestoreService _firestoreService = FirestoreService();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchGroups();
+  }
+
+  Future<void> _fetchGroups() async {
+    _groups = await _firestoreService.getGroups();
+    setState(() {});
+  }
+
+  Future<void> _toggleGroupMembership(Group group) async {
+    final user = _auth.currentUser;
+    if (user != null) {
+      if (group.memberIds.contains(user.uid)) {
+        await _firestoreService.leaveGroup(group, user.uid);
+      } else {
+        await _firestoreService.joinGroup(group, user.uid);
+      }
+      setState(() {
+        group.memberIds.contains(user.uid)
+            ? group.memberIds.remove(user.uid)
+            : group.memberIds.add(user.uid);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,57 +118,35 @@ class _GroupsPageState extends State<GroupsPage> {
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-              // Show search bar
               showSearch(
                 context: context,
-                delegate: GroupsSearchDelegate(_groups),
+                delegate: GroupsSearchDelegate(_firestoreService),
               );
             },
           ),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () {
-              // Navigate to create new group page
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => CreateGroupPage(groups: [],)),
+                MaterialPageRoute(builder: (context) => CreateGroupPage(firestoreService: _firestoreService)),
               );
             },
-          ),
-        ],
+          ),],
       ),
       body: ListView.builder(
-        itemCount: _filteredGroups().length,
+        itemCount: _groups.length,
         itemBuilder: (context, index) {
-          final group = _filteredGroups()[index];
+          final group = _groups[index];
           return GroupTile(
             group: group,
             onJoinLeave: () {
-              // Join or leave the group
               _toggleGroupMembership(group);
             },
           );
         },
       ),
     );
-  }
-
-  List<Group> _filteredGroups() {
-    if (_searchQuery.isEmpty) {
-      return _groups;
-    } else {
-      return _groups.where((group) =>
-          group.name.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
-    }
-  }
-
-  void _toggleGroupMembership(Group group) {
-    // Logic to join or leave the group
-    setState(() {
-      // Update the group's member count
-      group.memberCount += group.isMember ? -1 : 1;
-      group.isMember = !group.isMember;
-    });
   }
 }
 
@@ -113,7 +169,7 @@ class GroupTile extends StatelessWidget {
         subtitle: Text(group.description),
         trailing: TextButton(
           onPressed: onJoinLeave,
-          child: Text(group.isMember ? 'Leave' : 'Join'),
+          child: Text(group.memberIds.contains(FirebaseAuth.instance.currentUser?.uid) ? 'Leave' : 'Join'),
         ),
         contentPadding: const EdgeInsets.all(16),
       ),
@@ -121,11 +177,57 @@ class GroupTile extends StatelessWidget {
   }
 }
 
-class GroupsSearchDelegate extends SearchDelegate<String> {
-  final List<Group> _groups;
-  
+class GroupsSearchDelegate extends SearchDelegate<void> {
+  final FirestoreService firestoreService; // Use constructor parameter name
 
-  GroupsSearchDelegate(this._groups);
+  GroupsSearchDelegate(this.firestoreService);
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return StreamBuilder<List<Group>>(
+      stream: firestoreService.getGroupsStream(), // Use stream for real-time updates
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final filteredGroups = snapshot.data!
+            .where((group) => group.name.toLowerCase().contains(query.toLowerCase()))
+            .toList();
+
+        return ListView.builder(
+          itemCount: filteredGroups.length,
+          itemBuilder: (context, index) {
+            final group = filteredGroups[index];
+            return GroupTile(
+              group: group,
+              onJoinLeave: () => _toggleGroupMembership(group), // Use arrow function
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override // Make sure 'showResults' is implemented
+  void showResults(BuildContext context) {
+    // No need to show results separately if suggestions handle display
+  }
+
+  Future<void> _toggleGroupMembership(Group group) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      if (group.memberIds.contains(user.uid)) {
+        await firestoreService.leaveGroup(group, user.uid);
+      } else {
+        await firestoreService.joinGroup(group, user.uid);
+      }
+    }
+  }
 
   @override
   List<Widget>? buildActions(BuildContext context) {
@@ -134,6 +236,7 @@ class GroupsSearchDelegate extends SearchDelegate<String> {
         icon: const Icon(Icons.clear),
         onPressed: () {
           query = '';
+          close(context, null); // Close search delegate on clear (null result)
         },
       ),
     ];
@@ -143,57 +246,18 @@ class GroupsSearchDelegate extends SearchDelegate<String> {
   Widget? buildLeading(BuildContext context) {
     return IconButton(
       icon: const Icon(Icons.arrow_back),
-      onPressed: () {
-        close(context, '');
-      },
-    );
-  }
-
-  @override
-  Widget buildResults(BuildContext context) {
-    final filteredGroups = _groups.where((group) =>
-        group.name.toLowerCase().contains(query.toLowerCase())).toList();
-    return ListView.builder(
-      itemCount: filteredGroups.length,
-      itemBuilder: (context, index) {
-        final group = filteredGroups[index];
-        return GroupTile(
-          group: group,
-          onJoinLeave: () {
-            // Join or leave the group
-            // _toggleGroupMembership(group);
-          },
-        );
-      },
-    );
-  }
-
-  @override
-  Widget buildSuggestions(BuildContext context) {
-    final filteredGroups = _groups.where((group) =>
-        group.name.toLowerCase().contains(query.toLowerCase())).toList();
-    return ListView.builder(
-      itemCount: filteredGroups.length,
-      itemBuilder: (context, index) {
-        final group = filteredGroups[index];
-        return GroupTile(
-          group: group,
-          onJoinLeave: () {
-            // Join or leave the group
-            // _toggleGroupMembership(group);
-          },
-        );
-      },
+      onPressed: () => close(context, null), // Use arrow function and null result
     );
   }
 }
 
+
 class CreateGroupPage extends StatefulWidget {
-  final List<Group> groups;
-  const CreateGroupPage({super.key, required this.groups});
+  final FirestoreService firestoreService;
+
+  const CreateGroupPage({super.key, required this.firestoreService});
 
   @override
-  // ignore: library_private_types_in_public_api
   _CreateGroupPageState createState() => _CreateGroupPageState();
 }
 
@@ -202,13 +266,24 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
   String _groupName = '';
   String _groupDescription = '';
   String _groupPhotoUrl = '';
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  late List<Group> _groups;
-
-  @override
-  void initState() {
-    super.initState();
-    _groups = widget.groups;
+  Future<void> _createGroup() async {
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+      final user = _auth.currentUser;
+      if (user != null) {
+        final newGroup = Group(
+          id: UniqueKey().toString(),
+          name: _groupName,
+          photoUrl: _groupPhotoUrl,
+          description: _groupDescription,
+          memberIds: [user.uid],
+        );
+        await widget.firestoreService.createGroup(newGroup);
+        Navigator.pop(context);
+      }
+    }
   }
 
   @override
@@ -270,25 +345,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
               ),
               const SizedBox(height: 32),
               ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    _formKey.currentState!.save();
-                    // Create the new group
-                    final newGroup = Group(
-                      name: _groupName,
-                      photoUrl: _groupPhotoUrl,
-                      description: _groupDescription,
-                      memberCount: 1, // The creator is the first member
-                      isMember: true,
-                    );
-                    // Add the new group to the list and update the UI
-                    setState(() {
-                      _groups.add(newGroup);
-                    });
-                    // Navigate back to the Groups page
-                    Navigator.pop(context);
-                  }
-                },
+                onPressed: _createGroup,
                 child: const Text('Create Group'),
               ),
             ],
@@ -297,20 +354,4 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
       ),
     );
   }
-}
-
-class Group {
-  final String name;
-  final String photoUrl;
-  final String description;
-  int memberCount;
-  bool isMember;
-
-  Group({
-    required this.name,
-    required this.photoUrl,
-    required this.description,
-    required this.memberCount,
-    this.isMember = false,
-  });
 }

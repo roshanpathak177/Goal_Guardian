@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:goal_guardian/pages/login_page.dart';
-import 'package:goal_guardian/pages/register_page.dart';
+import 'package:goal_guardian/pages/register_page_1.dart';
 
 class LogingOrRegister extends StatefulWidget {
   const LogingOrRegister({super.key});
@@ -26,7 +26,7 @@ class _LogingOrRegisterState extends State<LogingOrRegister> {
     if (showLoginPage){
       return LoginPage(onTap: togglePages);
     } else {
-      return RegisterPage(onTap: togglePages);
+      return RegisterPage1(onTap: togglePages);
     }
   }
 }

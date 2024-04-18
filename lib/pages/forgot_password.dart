@@ -19,19 +19,50 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     super.dispose();
   }
 
-  Future passworReset() async{
-    try{
-      await FirebaseAuth.instance
-        .sendPasswordResetEmail(email: emailTextController.text.trim());
-    } on FirebaseAuthException catch(e){
-      print(e);
+  Future passworReset() async {
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: emailTextController.text.trim());
+      // Show a success dialog
       showDialog(
         context: context,
-        builder: (context){
+        builder: (context) {
           return AlertDialog(
-            content: Text(e.message.toString()),
+            content: Text('Password reset email sent to ${emailTextController.text.trim()}'),
           );
-        });
+        },
+      );
+    } on FirebaseAuthException catch (e) {
+      // Show an error dialog
+      if(e.code == 'user-not-found'){
+        showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              content: Text('The email address is not registered.'),
+            );
+          },
+        );
+      } else {
+        showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              content: Text(e.message.toString()),
+            );
+          },
+        );
+      }
+      
+    } catch (e) {
+      // Show a generic error dialog
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            content: Text('An error occurred. Please try again later.'),
+          );
+        },
+      );
     }
   } 
 
