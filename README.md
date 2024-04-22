@@ -12,11 +12,10 @@ Goal Guardian is a powerful accountability app designed to help you achieve your
 
 ## Getting Started
 
-1. **Install the App**: Download the Goal Guardian app from the App Store (iOS) or Google Play Store (Android).
-2. **Create an Account**: Sign up for a new account or log in if you already have one.
-3. **Join or Create a Group**: Browse existing groups or create a new one based on your goals and interests.
-4. **Set Your Goals**: Define your goals and specify the frequency (daily, weekly, or monthly) for tracking.
-5. **Stay Accountable**: Share your progress with the group, provide approvals, and engage in discussions to stay motivated.
+1. Clone the repository: git clone https://github.com/your-username/goal-guardian.git
+2. Install Flutter and set up your development environment by following the official Flutter documentation.
+3. Connect the app to Firebase by following the Firebase for Flutter documentation.
+4. Run the app using flutter run or your preferred IDE
 
 ## UI Wireframes
 
@@ -33,7 +32,13 @@ Goal Guardian is a powerful accountability app designed to help you achieve your
 
 ## Contributing
 
-We welcome contributions from the community! If you're interested in contributing to Goal Guardian, please check out our [Contributing Guidelines](https://github.com/goalguardian/app/blob/main/CONTRIBUTING.md) for more information.
+Contributions are welcome! If you'd like to contribute to Goal Guardian, please follow these steps:
+
+1. Fork the repository.
+2. Create a new branch for your feature: git checkout -b my-new-feature.
+3. Make your changes and commit them: git commit -m 'Add some feature'.
+4. Push your changes to the branch: git push origin my-new-feature.
+5. Submit a pull request.
 
 ## Screenshots
 
