@@ -12,7 +12,7 @@ Goal Guardian is a powerful accountability app designed to help you achieve your
 
 ## Getting Started
 
-1. Clone the repository: git clone https://github.com/your-username/goal-guardian.git
+1. Clone the repository: git clone https://github.com/roshanpathak177/goal_guardian.git
 2. Install Flutter and set up your development environment by following the official Flutter documentation.
 3. Connect the app to Firebase by following the Firebase for Flutter documentation.
 4. Run the app using flutter run or your preferred IDE
