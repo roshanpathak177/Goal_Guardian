@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:goal_guardian/auth/login_or_register.dart';
 import 'package:goal_guardian/components/side_navbar.dart';
+import 'package:goal_guardian/pages/create_goal_page.dart';
 import 'package:goal_guardian/pages/groups.dart';
 import 'package:goal_guardian/pages/intro.dart';
 import 'package:goal_guardian/pages/stats.dart';
@@ -36,6 +37,7 @@ class MyApp extends StatelessWidget {
       darkTheme: darkmode,
       home: LogingOrRegister(),
       routes: {
+        '/create_goal': (context) => CreateGoalPage(),
         '/groups': (context) => GroupsPage(),
         '/stats': (context) => StatsPage(),
         '/profile': (context) => ProfilePage()
@@ -63,6 +65,10 @@ class _MyHomePageState extends State<MyHomePage> {
     StatsPage(),
     ProfilePage(),
   ]; 
+
+  void _navigateToCreateGoalPage() {
+  Navigator.pushNamed(context, '/create_goal');
+}
 
   final List<Habit> _habits = [
     Habit(
@@ -109,8 +115,11 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           children: [const Text("Track your Goals!"),
         _buildMotivationalSection(),
+        const SizedBox(height: 15),
         _buildHabitsSection(),
+        const SizedBox(height: 15),
         _buildQuickActionsSection(),
+        const SizedBox(height: 15),
         _buildSocialSection(),],
         )
         ),
@@ -250,6 +259,11 @@ class _MyHomePageState extends State<MyHomePage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
+        ElevatedButton.icon(
+          onPressed: _navigateToCreateGoalPage, // Call the navigation method
+          icon: const Icon(Icons.add),
+          label: const Text('Create Goal'),
+        ),
         ElevatedButton.icon(
           onPressed: () {
             // Navigate to add new habit page

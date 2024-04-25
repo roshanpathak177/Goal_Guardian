@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class Group {
   final String id;
   final String name;
-  final String photoUrl;
+  String photoUrl;
   final String description;
   final List<String> memberIds;
   int get memberCount => memberIds.length;
@@ -67,6 +69,12 @@ class FirestoreService {
   Future<void> leaveGroup(Group group, String userId) async {
     await _firestore.collection('groups').doc(group.id).update({
       'memberIds': FieldValue.arrayRemove([userId]),
+    });
+  }
+  
+  Stream<List<Group>> getGroupsStream() {
+    return _firestore.collection('groups').snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => Group.fromMap(doc.data(), doc.id)).toList();
     });
   }
 }
@@ -178,53 +186,75 @@ class GroupTile extends StatelessWidget {
 }
 
 class GroupsSearchDelegate extends SearchDelegate<void> {
-  final FirestoreService firestoreService; // Use constructor parameter name
+  final FirestoreService _firestoreService;
 
-  GroupsSearchDelegate(this.firestoreService);
+  GroupsSearchDelegate(this._firestoreService);
 
   @override
   Widget buildSuggestions(BuildContext context) {
-    return StreamBuilder<List<Group>>(
-      stream: firestoreService.getGroupsStream(), // Use stream for real-time updates
+    return FutureBuilder<List<Group>>(
+      future: _firestoreService.getGroups(),
       builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        }
-
-        if (!snapshot.hasData) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        } else {
+          final filteredGroups = snapshot.data!.where((group) =>
+              group.name.toLowerCase().contains(query.toLowerCase())).toList();
+          return ListView.builder(
+            itemCount: filteredGroups.length,
+            itemBuilder: (context, index) {
+              final group = filteredGroups[index];
+              return GroupTile(
+                group: group,
+                onJoinLeave: () {
+                  _toggleGroupMembership(group);
+                },
+              );
+            },
+          );
         }
-
-        final filteredGroups = snapshot.data!
-            .where((group) => group.name.toLowerCase().contains(query.toLowerCase()))
-            .toList();
-
-        return ListView.builder(
-          itemCount: filteredGroups.length,
-          itemBuilder: (context, index) {
-            final group = filteredGroups[index];
-            return GroupTile(
-              group: group,
-              onJoinLeave: () => _toggleGroupMembership(group), // Use arrow function
-            );
-          },
-        );
       },
     );
   }
 
-  @override // Make sure 'showResults' is implemented
-  void showResults(BuildContext context) {
-    // No need to show results separately if suggestions handle display
+  @override
+  Widget buildResults(BuildContext context) {
+    return FutureBuilder<List<Group>>(
+      future: _firestoreService.getGroups(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        } else {
+          final filteredGroups = snapshot.data!.where((group) =>
+              group.name.toLowerCase().contains(query.toLowerCase())).toList();
+          return ListView.builder(
+            itemCount: filteredGroups.length,
+            itemBuilder: (context, index) {
+              final group = filteredGroups[index];
+              return GroupTile(
+                group: group,
+                onJoinLeave: () {
+                  _toggleGroupMembership(group);
+                },
+              );
+            },
+          );
+        }
+      },
+    );
   }
 
   Future<void> _toggleGroupMembership(Group group) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       if (group.memberIds.contains(user.uid)) {
-        await firestoreService.leaveGroup(group, user.uid);
+        await _firestoreService.leaveGroup(group, user.uid);
       } else {
-        await firestoreService.joinGroup(group, user.uid);
+        await _firestoreService.joinGroup(group, user.uid);
       }
     }
   }
@@ -236,7 +266,6 @@ class GroupsSearchDelegate extends SearchDelegate<void> {
         icon: const Icon(Icons.clear),
         onPressed: () {
           query = '';
-          close(context, null); // Close search delegate on clear (null result)
         },
       ),
     ];
@@ -246,7 +275,9 @@ class GroupsSearchDelegate extends SearchDelegate<void> {
   Widget? buildLeading(BuildContext context) {
     return IconButton(
       icon: const Icon(Icons.arrow_back),
-      onPressed: () => close(context, null), // Use arrow function and null result
+      onPressed: () {
+        close(context, '');
+      },
     );
   }
 }
@@ -265,24 +296,41 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
   final _formKey = GlobalKey<FormState>();
   String _groupName = '';
   String _groupDescription = '';
-  String _groupPhotoUrl = '';
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  XFile? _groupPhotoFile; // New variable to store the selected image file
 
   Future<void> _createGroup() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-      final user = _auth.currentUser;
+      final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         final newGroup = Group(
           id: UniqueKey().toString(),
           name: _groupName,
-          photoUrl: _groupPhotoUrl,
+          photoUrl: '', // We'll set the photoUrl after uploading the image
           description: _groupDescription,
           memberIds: [user.uid],
         );
+
+        // Upload the image to Firebase Storage if a file is selected
+        if (_groupPhotoFile != null) {
+          final storageRef = FirebaseStorage.instance.ref().child('group_photos/${newGroup.id}');
+          await storageRef.putData(await _groupPhotoFile!.readAsBytes());
+          newGroup.photoUrl = await storageRef.getDownloadURL();
+        }
+
         await widget.firestoreService.createGroup(newGroup);
         Navigator.pop(context);
       }
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _groupPhotoFile = pickedFile;
+      });
     }
   }
 
@@ -329,19 +377,9 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
                 },
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Group Photo URL',
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a group photo URL';
-                  }
-                  return null;
-                },
-                onSaved: (value) {
-                  _groupPhotoUrl = value!;
-                },
+              ElevatedButton(
+                onPressed: _pickImage,
+                child: const Text('Select Group Photo'),
               ),
               const SizedBox(height: 32),
               ElevatedButton(
